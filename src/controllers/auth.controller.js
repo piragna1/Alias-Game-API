@@ -1,10 +1,6 @@
-import {
-  UserLoginRequest,
-  UserRegisterRequest,
-  UserRegisterResponse,
-} from "../schemas/user.schema.js";
+import { UserLoginRequest, UserRegisterRequest } from "../schemas/user.schema.js";
+import authService from "../services/auth.service.js";
 import { AuthError, ConflictError } from "../utils/errors.js";
-import bcrypt from "bcrypt";
 
 // =================================================================================================
 // ====================================    METHODS    ==============================================
@@ -13,45 +9,35 @@ import bcrypt from "bcrypt";
 export async function registerUser(req, res, next) {
   const { name, email, password, role } = UserRegisterRequest.parse(req.body);
 
-  // Verify existing email
-  const existingUser = await getUserByEmail(email);
-  if (existingUser) throw new ConflictError("Email already in use");
-  // if (existingUser) return res.status(400).json({ status: "error", message: "Email already in use" });
-
-  // Hash password
-  const saltRounds = process.env.SALT_ROUNDS || 10;
-  const password_hash = await bcrypt.hash(password, saltRounds);
-
-  // Create user in DB
-  const newUser = await createUser({ name, email, password_hash, role });
-  const parsedUser = UserRegisterResponse.parse({
-    id: newUser.id,
-    name,
-    email,
-    role,
-  });
-
-  res.status(201).json({ status: "success", user: parsedUser });
+  try {
+    // Create user in DB
+    const newUser = await authService.register({ name, email, password, role });
+    res.status(201).json({ status: "success", user: newUser });
+  } catch (error) {
+    if (error instanceof ConflictError) {
+      return res.status(409).json({ status: "error", message: error.message });
+    }
+    console.log("Error in registerUser:", error);
+  }
 }
 
 export const login = async (req, res) => {
   const { email, password } = UserLoginRequest.parse(req.body);
 
-  const user = await authenticateUser(email, password);
-  if (!user) throw new AuthError("Invalid credentials");
-  // if (!user) return res.status(401).json({ error: "Invalid credentials" });
+  try {
+    const { accessToken, refreshToken } = await authService.login({ email, password });
 
-  // TODO: usar jsonwebtoken
-  const { accessToken, refreshToken } = await createNewTokens(user.id, user.role);
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
-
-  res.json({ accessToken });
+    res.status(200).json({ status: "success", accessToken });
+  } catch (error) {
+    res.status(401).json({ status: "error", message: error.message });
+  }
 };
 
 export const refreshToken = async (req, res) => {
@@ -60,7 +46,7 @@ export const refreshToken = async (req, res) => {
   // if (!token) return res.status(401).json({ message: "No refresh token provided" });
 
   // validate refresh and get new tokens
-  const tokens = await validateAndRotateToken(token);
+  const tokens = await authService.validateAndRotateToken(token);
   if (!tokens) throw new AuthError("Invalid or expired refresh token");
   // if (!tokens) return res.status(401).json({ message: "Invalid or expired refresh token" });
 
@@ -80,7 +66,7 @@ export const logout = async (req, res) => {
 
   if (token) {
     // delete from DB
-    await revokeRefreshToken(token);
+    await authService.revokeRefreshToken(token);
   }
 
   // clear cookie
