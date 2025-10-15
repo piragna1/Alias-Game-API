@@ -7,7 +7,7 @@ export const UserRoleEnum = z.enum(["admin", "player"]).default("player").meta({
 });
 
 export const UserSchema = z.object({
-  id: z.number().int().meta({ example: 1 }),
+  id: z.uuid().meta({ example: "550e8400-e29b-41d4-a716-446655440000" }),
   name: z.string().min(2).meta({ example: "Admin" }),
   email: z.email().meta({ example: "admin@example.com" }),
   password_hash: z.string(),
