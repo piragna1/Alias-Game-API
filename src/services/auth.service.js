@@ -1,28 +1,43 @@
 import userRepository from "../repositories/user.repository.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { UserRegisterResponse } from "../schemas/user.schema.js";
 
-async function register({ email, password }) {
-  const existing = await userRepository.findByEmail(email);
-  if (existing) throw new Error("Email already exists");
+async function register({ email, name, password }) {
+  const existingUser = await userRepository.findByEmail(email);
+  if (existingUser) throw new ConflictError("Email already in use");
 
+  // if (existingUser) return res.status(400).json({ status: "error", message: "Email already in use" });
   const hash = await bcrypt.hash(password, 10);
-  const user = await userRepository.create({ email, password: hash });
 
-  return { id: user.id, email: user.email };
+  const newUser = await userRepository.create({ email, name, password: hash });
+
+  const parsedUser = UserRegisterResponse.parse({
+    id: newUser.id,
+    name,
+    email,
+    role: newUser.role,
+  });
+
+  return parsedUser;
+}
+
+async function login({ email, password }) {
+  const user = await userRepository.findByEmail(email);
+  if (!user) throw new AuthError("Invalid credentials");
+  // if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+  const isValid = await bcrypt.compare(password, user.password_hash);
+  if (!isValid) throw new AuthError("Invalid credentials");
+
+  // TODO: Manage JWT tokens.
+  const { accessToken, refreshToken } = await createNewTokens(user.id, user.role);
+
+  return { accessToken, refreshToken };
 }
 
 async function getUserByEmail(email) {
   const user = await userRepository.findByEmail(email);
   return user ? user.email : null;
-}
-
-async function authenticateUser(email, password) {
-  const user = await userRepository.findByEmail(email);
-  if (!user) return null;
-
-  const isValid = await bcrypt.compare(password, user.password);
-  return isValid ? { id: user.id, email, role: user.role } : null;
 }
 
 async function createNewTokens(id, role) {
@@ -35,4 +50,4 @@ async function validateAndRotateToken(token) {
   return { accessToken: token, refreshToken: token };
 }
 
-export default { register };
+export default { register, login, revokeRefreshToken, validateAndRotateToken, getUserByEmail };
