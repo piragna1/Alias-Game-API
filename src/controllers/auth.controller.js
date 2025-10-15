@@ -6,29 +6,6 @@ import {
 import { AuthError, ConflictError } from "../utils/errors.js";
 import bcrypt from "bcrypt";
 
-// hardcoded function -> TODO: add in ./models/User.js
-async function getUserByEmail(email) {
-  return email == "user@email.com" ? "user@email.com" : null;
-}
-
-async function createUser({ name, email, password_hash, role }) {
-  return { id: 1 };
-}
-
-async function authenticateUser(email, password) {
-  return email == "user@email.com" ? { id: 1, email, role: "player" } : null;
-}
-
-async function createNewTokens(id, role) {
-  return { accessToken: role, refreshToken: role };
-}
-
-async function revokeRefreshToken() {}
-
-async function validateAndRotateToken(token) {
-  return { accessToken: token, refreshToken: token };
-}
-
 // =================================================================================================
 // ====================================    METHODS    ==============================================
 // =================================================================================================
