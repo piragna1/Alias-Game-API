@@ -8,7 +8,8 @@ async function register({ email, name, password }) {
   const existingUser = await userRepository.findByEmail(email);
   if (existingUser) throw new ConflictError("Email already in use");
 
-  // chequea por emails unicos pero no por nombres unicos: o hacemos otro chequeo por el nombre o hacemos que los nombres no sean unicos
+  const existingName = await userRepository.findByName(name);
+  if (existingName) throw new ConflictError("Name already in use");
 
   const hash = await bcrypt.hash(password, 10);
 
