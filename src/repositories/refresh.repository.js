@@ -13,4 +13,4 @@ async function revoke(userId, token) {
   await redisClient.del(userId);
 }
 
-export default { save, exists, revoke, getAll };
+export default { save, exists, revoke };
