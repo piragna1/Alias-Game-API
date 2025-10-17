@@ -1,11 +1,5 @@
 import { Router } from "express";
-import {
-  getAll,
-  login,
-  logout,
-  refreshToken,
-  registerUser,
-} from "../controllers/auth.controller.js";
+import { login, logout, refreshToken, registerUser } from "../controllers/auth.controller.js";
 import { extractTokens, getSession } from "../middlewares/authHandler.js";
 
 const router = Router();
