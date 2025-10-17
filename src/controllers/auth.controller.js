@@ -38,16 +38,13 @@ export const refreshToken = async (req, res) => {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 
-  res.json(tokens.accessToken);
+  res.status(200).json({ status: "success", accessToken: tokens.accessToken });
 };
 
 export const logout = async (req, res) => {
-  const token = req.cookies.refreshToken;
+  const user = req.user;
 
-  if (token) {
-    // delete from DB
-    await authService.revokeRefreshToken(token);
-  }
+  await authService.logout(user.id);
 
   // clear cookie
   res.clearCookie("refreshToken", {
