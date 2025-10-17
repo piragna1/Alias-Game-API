@@ -10,6 +10,11 @@ services:
       POSTGRES_DB: alias_db
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d alias_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   # Nota: se expone el puerto 5433 en el host en lugar del 5432
   # porque en algunos entornos de desarrollo puede estar corriendo una
   # instancia local de PostgreSQL fuera de Docker (por ejemplo, instalada por el sistema).
@@ -49,8 +54,8 @@ services:
     build: .
     restart: always
     environment:
-      DB_USER: alias_user
-      DB_PASSWORD: mypassword
+      DB_USER: dbuser
+      DB_PASSWORD: password
       DB_NAME: alias_db
       DB_HOST: alias_db
       DB_PORT: 5432
