@@ -1,3 +1,4 @@
+import { AuthError } from "../utils/errors.js";
 import jwt from "../utils/jwt.js";
 
 export async function getSession(req, res, next) {
@@ -7,7 +8,7 @@ export async function getSession(req, res, next) {
       throw new AuthError("No access token provided");
     }
 
-    const payload = await jwt.verifyAccessToken({ token });
+    const payload = jwt.verifyAccessToken({ token });
     if (!payload) throw new AuthError("Invalid or expired token");
 
     const { exp, iat, ...userData } = payload;
