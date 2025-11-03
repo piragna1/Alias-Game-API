@@ -1,6 +1,6 @@
 # Alias-Game-API
 
-Table of content
+## Table of content
 
 - [Overview](#overview)
 - [Summary](#summary)
