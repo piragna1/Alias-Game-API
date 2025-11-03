@@ -12,11 +12,13 @@
 
 ## Overview
 
-Alias Game API es un servicio backend diseñado para generar y administrar bancos de palabras para juegos de adivinanza tipo *Alias*.  
-El sistema permite:
-- Construir una banca de hasta 10.000 palabras.
-- Asociar a cada palabra un conjunto de 6 prohibidas (sinónimos, variaciones fonéticas u ortográficas, relaciones semánticas).
-- Integrar múltiples fuentes (APIs externas y listas locales) con fallback para garantizar robustez.
-- Mantener la banca limpia y consistente mediante scripts de filtrado.
+Alias Game is a multiplayer word-guessing game currently under development.  
+The goal of the project is to recreate the classic *Alias* experience in a digital environment, where players must describe a target word without using a set of forbidden words.  
 
-Este proyecto está pensado para ser **modular, escalable y fácil de extender**, de modo que se pueda integrar en diferentes entornos de juego multijugador.
+The system includes:
+- A backend service that builds and manages a word bank.  
+- Automatic generation of forbidden words for each entry (semantic, phonetic, and spelling variations).
+- An architecture designed for future expansion into multiplayer gameplay.  
+
+This repository represents the foundation of the game logic, which will later integrate with a frontend interface to deliver a complete interactive experience.
+
