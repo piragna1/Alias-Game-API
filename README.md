@@ -32,9 +32,11 @@ To run the project locally, follow these steps:
    ```
 
 3. In the second terminal, navigate to the `frontend` folder:
+4. ```bash
    cd frontend
    npm install
    npm run dev
+   ```
 
 Both servers will start in development mode.
 Make sure the backend is running before interacting with the frontend.
