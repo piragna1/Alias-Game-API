@@ -58,8 +58,7 @@ Users must register and log in to access protected endpoints.
     "password": "securePassword123",
     "role": "player"
   }
-  ```
-
+   ```
 - POST /login  
   Authenticates the user and returns an access token in the response body.  
   A refresh token is stored in an HTTP-only cookie with the following properties:
@@ -79,10 +78,16 @@ Users must register and log in to access protected endpoints.
 
 ### Token handling
 
-- Access tokens are expected in the Authorization header using the Bearer scheme.
-- Refresh tokens are stored securely in HTTP-only cookies.
-- The extractTokens middleware parses both tokens and attaches them to the request object.
-- The refreshToken controller validates and rotates the refresh token, issuing a new pair.
-- Middleware functions (extractTokens, getSession) are used to validate and manage token flow.
+- Access tokens are returned in the response body and are valid for 15 minutes.  
+  The backend does not store access tokens.
+
+- Refresh tokens are stored securely in HTTP-only cookies and are valid for 7 days.  
+  However, they are stored in Redis with a TTL of 1 day for session management.  
+  Redis key format: `alias-game:token:{userId}`  
+  Redis value: the refresh token string
+
+- The `extractTokens` middleware parses both tokens and attaches them to the request object.  
+- The `refreshToken` controller validates and rotates the refresh token, issuing a new pair.  
+- Middleware functions (`extractTokens`, `getSession`) are used to validate and manage token flow.
 
 Note: All protected routes require valid tokens to be included in the request.
