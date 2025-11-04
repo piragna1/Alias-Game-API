@@ -51,12 +51,14 @@ Users must register and log in to access protected endpoints.
 - POST /register  
   Creates a new user account.  
   Requires the following fields in the request body:
+  ```json
   {
     "name": "John Doe",
     "email": "john@example.com",
     "password": "securePassword123",
     "role": "player"
   }
+  ```
 
 - POST /login  
   Authenticates the user and returns an access token in the response body.  
