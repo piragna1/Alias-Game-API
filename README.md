@@ -19,3 +19,20 @@ The system includes:
 
 This repository represents the foundation of the game logic, which will later integrate with a frontend interface to deliver a complete interactive experience.
 
+## Setup
+
+To run the project locally, follow these steps:
+
+1. Open two terminal windows.
+2. In the first terminal, navigate to the `backend` folder:
+   cd backend
+   npm install
+   npm run dev
+
+3. In the second terminal, navigate to the `frontend` folder:
+   cd frontend
+   npm install
+   npm run dev
+
+Both servers will start in development mode.
+Make sure the backend is running before interacting with the frontend.
