@@ -62,7 +62,8 @@ Users must register and log in to access protected endpoints.
     "password": "securePassword123",
     "role": "player"
   }
-   ```
+  ```
+  
 - POST /login  
   Authenticates the user and returns an access token in the response body.  
   A refresh token is stored in an HTTP-only cookie with the following properties:
@@ -70,6 +71,30 @@ Users must register and log in to access protected endpoints.
   - secure: true (in production)  
   - sameSite: "strict"  
   - maxAge: 30 days
+
+  #### Login request format
+
+  Send a POST request to /login with the following JSON body:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "yourPassword123"
+  }
+  ```
+
+  #### Login response
+
+  On success, the server returns:
+  - An accessToken in the response body (valid for 15 minutes).
+  - A refreshToken stored in an HTTP-only cookie.
+
+  Example response:
+  ```json
+  {
+    "status": "success",
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+  }
+  ```
 
 - POST /refresh-token  
   Renews the access token using a valid refresh token.  
@@ -87,15 +112,14 @@ Users must register and log in to access protected endpoints.
 
 - Refresh tokens are stored securely in HTTP-only cookies and are valid for 7 days.  
   However, they are stored in Redis with a TTL of 1 day for session management.  
-  Redis key format: `alias-game:token:{userId}`  
+  Redis key format: alias-game:token:{userId}  
   Redis value: the refresh token string
 
-- The `extractTokens` middleware parses both tokens and attaches them to the request object.  
-- The `refreshToken` controller validates and rotates the refresh token, issuing a new pair.  
-- Middleware functions (`extractTokens`, `getSession`) are used to validate and manage token flow.
+- The extractTokens middleware parses both tokens and attaches them to the request object.  
+- The refreshToken controller validates and rotates the refresh token, issuing a new pair.  
+- Middleware functions (extractTokens, getSession) are used to validate and manage token flow.
 
 Note: All protected routes require valid tokens to be included in the request.
-
 ## Endpoints
 
 ### Auth
