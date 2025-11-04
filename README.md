@@ -130,7 +130,8 @@ Note: All protected routes require valid tokens to be included in the request.
   Retrieves room details by code.  
   Public endpoint.
 
-  ## WebSocket Events
+
+## WebSocket Events
 
 The game logic is handled via WebSocket events using [Socket.IO](https://socket.io/).  
 Clients must establish a socket connection after authentication to participate in real-time gameplay.
