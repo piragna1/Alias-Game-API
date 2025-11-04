@@ -91,3 +91,68 @@ Users must register and log in to access protected endpoints.
 - Middleware functions (`extractTokens`, `getSession`) are used to validate and manage token flow.
 
 Note: All protected routes require valid tokens to be included in the request.
+
+## Endpoints
+
+### Auth
+
+- `POST /register`  
+  Creates a new user account.
+
+- `POST /login`  
+  Authenticates the user and returns access and refresh tokens.
+
+- `POST /refresh-token`  
+  Renews the access token using a valid refresh token.
+
+- `POST /logout`  
+  Invalidates the current session.
+
+### Rooms
+
+- `POST /`  
+  Creates a new game room.  
+  Requires authentication.
+
+- `POST /:code/join`  
+  Joins an existing room by code.  
+  Requires authentication.
+
+- `DELETE /:code/leave`  
+  Leaves the specified room.  
+  Requires authentication.
+
+- `PATCH /:code/status`  
+  Updates the status of a room (e.g., from "waiting" to "in-game").  
+  Requires authentication.
+
+- `GET /:code`  
+  Retrieves room details by code.  
+  Public endpoint.
+
+  ## WebSocket Events
+
+The game logic is handled via WebSocket events using [Socket.IO](https://socket.io/).  
+Clients must establish a socket connection after authentication to participate in real-time gameplay.
+
+### Example events
+
+- `connect`  
+  Triggered when a client connects to the server.
+
+- `room:join`  
+  Join a specific room by code.
+
+- `game:start`  
+  Starts a new game round.
+
+- `game:guess`  
+  Submit a guess for the current word.
+
+- `game:skip`  
+  Skip the current word.
+
+- `game:end`  
+  Ends the current round and broadcasts results.
+
+> Note: All socket events are namespaced and require a valid session.
