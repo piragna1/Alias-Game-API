@@ -193,10 +193,12 @@ Clients must establish a socket connection after authentication to participate i
 ```txt
 User : Room -> N : 1
 ```
+Many users can be connected to a room and just one room at the same time.
 ```txt
 Word : TabooWord -> 1 : N
 ```
+The word to guess is related to several taboo words that can not be written.
 ```txt
 Word : SimilarWord -> 1 : N
 ```
-
+The word to guess is related to several similar words each one with its own similarity score.
