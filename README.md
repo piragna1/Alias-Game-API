@@ -189,7 +189,7 @@ Clients must establish a socket connection after authentication to participate i
 > Note: All socket events are namespaced and require a valid session.
 
 
-# Entities Relationships
+# Entities Relationship
 
 User : Room -> N : 1
 Word : TabooWord -> 1 : N
