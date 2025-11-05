@@ -226,22 +226,26 @@ Word : SimilarWord → 1 : N
    - Emits game:finished  
    - Updates Redis and DB  
 
+
 ### Redis Keys
 
-- alias-game:room:<code>  
-- alias-game:game:<code>  
-- alias-game:userSocket:<userId>  
+
+- alias-game:room:<code>
+
+- alias-game:game:<code>
+
+- alias-game:userSocket:<userId>
+
 
 ### Room Fields
-
 - players, teams, globalScore, games, status  
 
-### Game Fields
 
+### Game Fields
 - teams, currentTeam, wordToGuess, turnsPlayed, state  
 
-### Validation & Security
 
+### Validation & Security
 - Zod schema for messages  
 - cleanText for normalization  
 - JWT for session  
