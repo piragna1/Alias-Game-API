@@ -6,243 +6,178 @@
 - [Setup](#setup)
 - [Endpoints](#endpoints)
 - [Entities Relationship](#entities-relationship)
-- [Game Flow (Frontend Perspective)](#Game-Flow-(Frontend-Perspective))
+- [Game Flow (Frontend Perspective)](#game-flow-frontend-perspective)
+- [Game Flow (Backend Perspective)](#game-flow-backend-perspective)
+- [Game Architecture](#game-architecture)
 
 ## Overview
 
 Alias Game is a multiplayer word-guessing game currently under development.  
-The goal of the project is to recreate the classic *Alias* experience in a digital environment, where players must describe a target word without using a set of forbidden words.
+The goal of the project is to recreate the classic Alias experience in a digital environment, where players must describe a target word without using a set of forbidden words.
 
-The system includes:
-- A backend service that builds and manages a word bank.
-- Automatic generation of forbidden words for each entry (semantic, phonetic, and spelling variations).
-- Real-time multiplayer support using WebSocket events powered by Socket.IO.
-- A modular architecture designed for separation between game logic, session management, and player interactions.
+The system includes:  
+- A backend service that builds and manages a word bank.  
+- Automatic generation of forbidden words for each entry (semantic, phonetic, and spelling variations).  
+- Real-time multiplayer support using WebSocket events powered by Socket.IO.  
+- A modular architecture designed for separation between game logic, session management, and player interactions.  
 
 This repository represents the foundation of the game logic, including both RESTful endpoints and WebSocket event handling.  
 It will later integrate with a frontend interface to deliver a complete interactive experience.
 
-
 ## Setup
 
-To run the project locally, follow these steps:
+To run the project locally:
 
-1. Make sure you have [Docker](https://www.docker.com/) installed and running on your system.
-
-2. Open two terminal windows.
-
-3. In the first terminal, navigate to the `backend` folder and start the required services:
-```bash
-   docker compose up --build
-   npm install
-   npm run dev
-```
-5. In the second terminal, navigate to the `frontend` folder and start the development server:
-```bash
-   cd frontend
-   npm install
-   npm run dev
-```
-Both servers will start in development mode.  
-Make sure the backend (including Docker services) is running before interacting with the frontend.
+1. Make sure you have Docker installed and running.  
+2. Open two terminal windows.  
+3. In the first terminal:  
+   - cd backend  
+   - docker compose up --build  
+   - npm install  
+   - npm run dev  
+4. In the second terminal:  
+   - cd frontend  
+   - npm install  
+   - npm run dev  
 
 ## Endpoints
 
 ### Authentication
 
-- **POST /auth/register**
-  - Body: { name, email, password, role }
-  - Creates a new user in the database.
-  - Returns: { status: "success", user }
-
-- **POST /auth/login**
-  - Body: { email, password }
-  - Validates credentials and issues:
-    - accessToken (JSON response, valid 15 min)
-    - refreshToken (HTTP-only cookie, valid 30 days)
-  - Returns: { status: "success", accessToken }
-
-- **POST /auth/refresh-token**
-  - Requires refreshToken cookie.
-  - Rotates tokens and returns new accessToken.
-  - Returns: { status: "success", accessToken }
-
-- **POST /auth/logout**
-  - Requires valid tokens.
-  - Invalidates session, clears refreshToken cookie.
-  - Returns: { message: "Logged out successfully" }
-
----
+- POST /auth/register → Register new user  
+- POST /auth/login → Login and receive access/refresh tokens  
+- POST /auth/refresh-token → Rotate tokens  
+- POST /auth/logout → Invalidate session  
 
 ### Rooms
 
-- **POST /rooms**
-  - Auth required.
-  - Creates a new room with the requesting user as host.
-  - Returns: room object.
-
-- **POST /rooms/:code/join**
-  - Auth required.
-  - Adds the user to the room (auto-assigns team).
-  - Emits `player:joined` and `team-state` via sockets.
-  - Returns: updated room object.
-
-- **DELETE /rooms/:code/leave**
-  - Auth required.
-  - Marks user as inactive in the room.
-  - If last player leaves → room is closed (`room:close` event).
-  - Returns: updated room object.
-
-- **POST /rooms/:code/start**
-  - Auth required.
-  - Starts a new game in the room.
-  - Calls `gameService.createGame`.
-  - Emits `game:started` event with initial game state.
-  - Returns: game object.
-
-- **PATCH /rooms/:code/status**
-  - Auth required.
-  - Updates room status (e.g., waiting, finished).
-  - Returns: updated room object.
-
-- **GET /rooms/:code**
-  - Fetches room details (teams, players, scores).
-  - Returns: room object.
-
-- **GET /rooms**
-  - Lists available rooms with status "waiting".
-  - Returns: array of rooms.
-
----
+- POST /rooms → Create new room  
+- POST /rooms/:code/join → Join room and assign team  
+- DELETE /rooms/:code/leave → Leave room or close if empty  
+- POST /rooms/:code/start → Start game  
+- PATCH /rooms/:code/status → Update room status  
+- GET /rooms/:code → Get room details  
+- GET /rooms → List available rooms  
 
 ### Integration with Game Flow
 
-- **REST → Game Start**
-  - `POST /rooms/:code/start` → `gameService.createGame` → `SocketEventEmitter.gameStarted`.
+- REST triggers game start via gameService.createGame  
+- WebSocket events handle game progress and chat  
+- Redis stores room and game state  
+- Sequelize persists users, rooms, words, and scores  
 
-- **Sockets → Game Progress**
-  - Players interact via `chat:message` and `game:message`.
-  - `game.service.js` validates answers/taboo words.
-  - Events emitted: `game:correct-answer`, `game:taboo-word`, `game:turn-updated`, `game:finished`.
-
-- **Persistence**
-  - Room state stored in Redis (`roomCache`).
-  - Game state stored in Redis (`gameCache`).
-  - DB (Sequelize) used for persistence of rooms, users, words, scores.# Entities Relationship
- 
 ## Entities Relationship
-```txt
-User : Room -> N : 1
-```
-Many users can be connected to a room and just one room at the same time.
-```txt
-Word : TabooWord -> 1 : N
-```
-The word to guess is related to several taboo words that can not be written.
-```txt
-Word : SimilarWord -> 1 : N
-```
-The word to guess is related to several similar words each one with its own similarity score.
+
+User : Room → N : 1  
+Word : TabooWord → 1 : N  
+Word : SimilarWord → 1 : N  
 
 ## Game Flow (Frontend Perspective)
 
-This section describes how the frontend reacts to game events using WebSocket messages and API calls, as implemented in RoomPage.jsx.
-
 ### Initial Room Load
 
-When the user enters a room:
+- Fetch room data  
+- Verify room status and user  
+- Load game if in progress  
 
-- The frontend fetches room data from GET /rooms/:roomCode.
-- It verifies:
-  - That the room is active (status !== "finished").
-  - That the user is part of the room (players.some(p => p.id === user.id && p.active)).
-- If a game is already in progress (data.game exists), it sets the room state to "in-game" and loads the current game data.
+### WebSocket Events
 
-### WebSocket Event Handling
-
-The frontend listens to the following WebSocket events:
-
-Event                | Effect on UI
----------------------|---------------------------------------------------------------
-player:joined        | Adds a system message to chat
-player:left          | Adds a system message to chat
-chat:message         | Appends a new user message to chat
-team-state           | Updates team composition (red and blue)
-game:started         | Sets roomState to "in-game" and loads initial game data
-game:turn-updated    | Updates gameData with new turn info
-game:correct-answer  | Updates gameData and appends a success message
-game:taboo-word      | Displays an error message (forbidden word used)
-game:finished        | Stores final results in gameData.results, resets to lobby
-room:updated         | Updates room metadata (e.g., global scores)
-
-All events are handled through a single handleSocketEvent dispatcher.
+- player:joined → Adds system message  
+- player:left → Adds system message  
+- chat:message → Appends chat message  
+- team-state → Updates team composition  
+- game:started → Loads initial game data  
+- game:turn-updated → Updates turn info  
+- game:correct-answer → Shows success message  
+- game:taboo-word → Shows error message  
+- game:finished → Displays results  
+- room:updated → Updates room metadata  
 
 ### Game State
 
-- roomState: "lobby" or "in-game", determines layout and available actions.
-- gameData: Contains current word, team turn, timer, and results.
-- roomData: Holds global scores and room metadata.
-- teams: Updated via team-state event or initial fetch.
-- messages: Chat and system messages, updated on most events.
+- roomState: lobby or in-game  
+- gameData: word, turn, timer, results  
+- roomData: scores and metadata  
+- teams: red and blue  
+- messages: chat and system logs  
 
 ### Game Actions
 
-- Join a team: Emits join-team with { roomCode, team, userId }.
-- Start game: Calls POST /rooms/:roomCode/start, which triggers game:started.
-- Leave room: Calls DELETE /rooms/:roomCode/leave and redirects to home.
+- Join team → emit join-team  
+- Start game → POST /rooms/:code/start  
+- Leave room → DELETE /rooms/:code/leave  
 
 ## Game Flow (Backend Perspective)
 
-This section describes how the backend handles game logic and real-time communication using WebSocket events.
-
 ### Socket Initialization
 
-- The `registerRoomSocket(io)` function sets up the socket server.
-- A middleware validates the access token from `socket.handshake.auth.token`.
-- If a previous socket exists for the same user and `override` is not set, the connection is rejected.
-- On successful connection, the socket ID is cached in Redis using `socketCache.set(userId, socket.id)`.
+- Validate token  
+- Cache socket ID  
+- Reject duplicates unless override  
 
 ### Core Events
 
-#### chat:message
-- Broadcasts a chat message to the room using `SocketEventEmitter.sendMessage`.
+- chat:message → broadcast  
+- game:message → validate answer/taboo  
+- join-team → update team  
+- disconnect → mark inactive and update room  
 
-#### game:message
-- Validates the message using `gameService.checkForAnswer(user, text, code)`.
-- Depending on the result:
-  - If correct → emits `game:correct-answer`.
-  - If taboo word → emits `game:taboo-word` to the sender only.
-  - Otherwise → emits a regular chat message.
+### SocketEventEmitter
 
-#### join-team
-- Updates team assignment via `roomService.updateTeams`.
-
-#### disconnect
-- If the socket was part of a room, it triggers `roomService.leaveRoom`.
-- Emits `player:left` to the room.
-- Removes the socket mapping from Redis.
-
-### Event Emission via SocketEventEmitter
-
-| Method                     | Emits Event           | Description                                      |
-|---------------------------|-----------------------|--------------------------------------------------|
-| `gameStarted`             | `game:started`        | Broadcasts game start with initial game state    |
-| `gameCorrectAnswer`       | `game:correct-answer` | Broadcasts correct guess with updated game state |
-| `gameTurnUpdated`         | `game:turn-updated`   | Broadcasts new turn info                         |
-| `tabooWord`               | `game:taboo-word`     | Sends error to user who used forbidden word      |
-| `gameFinished`            | `game:finished`       | Broadcasts final results                         |
-| `sendMessage`             | `chat:message`        | Broadcasts chat message                          |
-| `updateRoom`              | `room:updated`        | Broadcasts room metadata update                  |
-| `teamState`               | `team-state`          | Broadcasts updated team composition              |
-| `joinRoom` / `leaveRoom`  | `player:joined` / `player:left` | Broadcasts player movement between rooms |
+- gameStarted → game:started  
+- gameCorrectAnswer → game:correct-answer  
+- gameTurnUpdated → game:turn-updated  
+- tabooWord → game:taboo-word  
+- gameFinished → game:finished  
+- sendMessage → chat:message  
+- updateRoom → room:updated  
+- teamState → team-state  
+- joinRoom / leaveRoom → player:joined / player:left  
 
 ### Redis Usage
 
-- Socket IDs are cached per user to ensure single active connection.
-- On disconnect, the mapping is removed.
-- This enables targeted emissions like `tabooWord` to a specific user.
+- roomCache → room state  
+- gameCache → game state  
+- socketCache → userId to socketId  
+- TTL: 6 hours  
 
-### Notes
+## Game Architecture
 
-- All payloads follow a consistent structure via `buildPayload(type, status, data, message)`.
-- The `SocketEventEmitter` is initialized once via `SocketEventEmitter.init(io)` and reused across the app.
+### Flow Overview
+
+1. User joins room  
+   - REST + socket events  
+   - Redis updates  
+2. Game starts  
+   - REST triggers game creation  
+   - Emits game:started  
+3. Gameplay  
+   - game:message → validate  
+   - Emits correct-answer or taboo-word  
+4. Turn ends  
+   - Timer or correct guess  
+   - Emits game:turn-updated  
+5. Game ends  
+   - Emits game:finished  
+   - Updates Redis and DB  
+
+### Redis Keys
+
+- alias-game:room:<code>  
+- alias-game:game:<code>  
+- alias-game:userSocket:<userId>  
+
+### Room Fields
+
+- players, teams, globalScore, games, status  
+
+### Game Fields
+
+- teams, currentTeam, wordToGuess, turnsPlayed, state  
+
+### Validation & Security
+
+- Zod schema for messages  
+- cleanText for normalization  
+- JWT for session  
+- HTTP-only cookies for refresh tokens  
