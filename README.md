@@ -28,23 +28,24 @@ It will later integrate with a frontend interface to deliver a complete interact
 
 To run the project locally, follow these steps:
 
-1. Open two terminal windows.
-2. In the first terminal, navigate to the `backend` folder:
-   ``` bash
-   cd backend
+1. Make sure you have Docker installed and running on your system.
+
+2. Open two terminal windows.
+
+3. In the first terminal, navigate to the `backend` folder and start the required services:
+```bash
+   docker compose up --build
    npm install
    npm run dev
-   ```
-
-3. In the second terminal, navigate to the `frontend` folder:
-4. ```bash
+```
+5. In the second terminal, navigate to the `frontend` folder and start the development server:
+```bash
    cd frontend
    npm install
    npm run dev
-   ```
-
-Both servers will start in development mode.
-Make sure the backend is running before interacting with the frontend.
+```
+Both servers will start in development mode.  
+Make sure the backend (including Docker services) is running before interacting with the frontend.
 
 ## Authentication
 
@@ -186,3 +187,12 @@ Clients must establish a socket connection after authentication to participate i
   Ends the current round and broadcasts results.
 
 > Note: All socket events are namespaced and require a valid session.
+
+
+# Entities Relationships
+
+User : Room -> N : 1
+Word : TabooWord -> 1 : N
+Word : SimilarWord -> 1 : N
+............................
+
