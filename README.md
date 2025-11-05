@@ -228,13 +228,9 @@ Word : SimilarWord → 1 : N
 
 
 ### Redis Keys
-
-
-- alias-game:room:<code>
-
-- alias-game:game:<code>
-
-- alias-game:userSocket:<userId>
+- alias-game:room:code
+- alias-game:game:code
+- alias-game:userSocket:userId
 
 
 ### Room Fields
