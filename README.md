@@ -7,6 +7,7 @@
 - [Authentication](#authentication)
 - [Endpoints](#endpoints)
 - [WebSocket Events](#websocket-events)
+- [Entities Relationship](#entities-relationship)
 
 ## Overview
 
