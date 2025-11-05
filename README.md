@@ -6,8 +6,8 @@
 - [Setup](#setup)
 - [Authentication](#authentication)
 - [Endpoints](#endpoints)
-- [WebSocket Events](#websocket-events)
 - [Entities Relationship](#entities-relationship)
+- [WebSocket Events](#websocket-events)
 
 ## Overview
 
@@ -161,6 +161,22 @@ Note: All protected routes require valid tokens to be included in the request.
   Public endpoint.
 
 
+
+# Entities Relationship
+```txt
+User : Room -> N : 1
+```
+Many users can be connected to a room and just one room at the same time.
+```txt
+Word : TabooWord -> 1 : N
+```
+The word to guess is related to several taboo words that can not be written.
+```txt
+Word : SimilarWord -> 1 : N
+```
+The word to guess is related to several similar words each one with its own similarity score.
+
+
 ## WebSocket Events
 
 The game logic is handled via WebSocket events using [Socket.IO](https://socket.io/).  
@@ -188,17 +204,105 @@ Clients must establish a socket connection after authentication to participate i
 
 > Note: All socket events are namespaced and require a valid session.
 
+## Game Flow (Frontend Perspective)
 
-# Entities Relationship
-```txt
-User : Room -> N : 1
-```
-Many users can be connected to a room and just one room at the same time.
-```txt
-Word : TabooWord -> 1 : N
-```
-The word to guess is related to several taboo words that can not be written.
-```txt
-Word : SimilarWord -> 1 : N
-```
-The word to guess is related to several similar words each one with its own similarity score.
+This section describes how the frontend reacts to game events using WebSocket messages and API calls, as implemented in RoomPage.jsx.
+
+### Initial Room Load
+
+When the user enters a room:
+
+- The frontend fetches room data from GET /rooms/:roomCode.
+- It verifies:
+  - That the room is active (status !== "finished").
+  - That the user is part of the room (players.some(p => p.id === user.id && p.active)).
+- If a game is already in progress (data.game exists), it sets the room state to "in-game" and loads the current game data.
+
+### WebSocket Event Handling
+
+The frontend listens to the following WebSocket events:
+
+Event                | Effect on UI
+---------------------|---------------------------------------------------------------
+player:joined        | Adds a system message to chat
+player:left          | Adds a system message to chat
+chat:message         | Appends a new user message to chat
+team-state           | Updates team composition (red and blue)
+game:started         | Sets roomState to "in-game" and loads initial game data
+game:turn-updated    | Updates gameData with new turn info
+game:correct-answer  | Updates gameData and appends a success message
+game:taboo-word      | Displays an error message (forbidden word used)
+game:finished        | Stores final results in gameData.results, resets to lobby
+room:updated         | Updates room metadata (e.g., global scores)
+
+All events are handled through a single handleSocketEvent dispatcher.
+
+### Game State
+
+- roomState: "lobby" or "in-game", determines layout and available actions.
+- gameData: Contains current word, team turn, timer, and results.
+- roomData: Holds global scores and room metadata.
+- teams: Updated via team-state event or initial fetch.
+- messages: Chat and system messages, updated on most events.
+
+### Game Actions
+
+- Join a team: Emits join-team with { roomCode, team, userId }.
+- Start game: Calls POST /rooms/:roomCode/start, which triggers game:started.
+- Leave room: Calls DELETE /rooms/:roomCode/leave and redirects to home.
+
+## Game Flow (Backend Perspective)
+
+This section describes how the backend handles game logic and real-time communication using WebSocket events.
+
+### Socket Initialization
+
+- The `registerRoomSocket(io)` function sets up the socket server.
+- A middleware validates the access token from `socket.handshake.auth.token`.
+- If a previous socket exists for the same user and `override` is not set, the connection is rejected.
+- On successful connection, the socket ID is cached in Redis using `socketCache.set(userId, socket.id)`.
+
+### Core Events
+
+#### chat:message
+- Broadcasts a chat message to the room using `SocketEventEmitter.sendMessage`.
+
+#### game:message
+- Validates the message using `gameService.checkForAnswer(user, text, code)`.
+- Depending on the result:
+  - If correct → emits `game:correct-answer`.
+  - If taboo word → emits `game:taboo-word` to the sender only.
+  - Otherwise → emits a regular chat message.
+
+#### join-team
+- Updates team assignment via `roomService.updateTeams`.
+
+#### disconnect
+- If the socket was part of a room, it triggers `roomService.leaveRoom`.
+- Emits `player:left` to the room.
+- Removes the socket mapping from Redis.
+
+### Event Emission via SocketEventEmitter
+
+| Method                     | Emits Event           | Description                                      |
+|---------------------------|-----------------------|--------------------------------------------------|
+| `gameStarted`             | `game:started`        | Broadcasts game start with initial game state    |
+| `gameCorrectAnswer`       | `game:correct-answer` | Broadcasts correct guess with updated game state |
+| `gameTurnUpdated`         | `game:turn-updated`   | Broadcasts new turn info                         |
+| `tabooWord`               | `game:taboo-word`     | Sends error to user who used forbidden word      |
+| `gameFinished`            | `game:finished`       | Broadcasts final results                         |
+| `sendMessage`             | `chat:message`        | Broadcasts chat message                          |
+| `updateRoom`              | `room:updated`        | Broadcasts room metadata update                  |
+| `teamState`               | `team-state`          | Broadcasts updated team composition              |
+| `joinRoom` / `leaveRoom`  | `player:joined` / `player:left` | Broadcasts player movement between rooms |
+
+### Redis Usage
+
+- Socket IDs are cached per user to ensure single active connection.
+- On disconnect, the mapping is removed.
+- This enables targeted emissions like `tabooWord` to a specific user.
+
+### Notes
+
+- All payloads follow a consistent structure via `buildPayload(type, status, data, message)`.
+- The `SocketEventEmitter` is initialized once via `SocketEventEmitter.init(io)` and reused across the app.
