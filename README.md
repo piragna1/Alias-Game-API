@@ -28,7 +28,7 @@ It will later integrate with a frontend interface to deliver a complete interact
 
 To run the project locally, follow these steps:
 
-1. Make sure you have Docker installed and running on your system.
+1. Make sure you have [Docker](https://www.docker.com/) installed and running on your system.
 
 2. Open two terminal windows.
 
@@ -190,9 +190,13 @@ Clients must establish a socket connection after authentication to participate i
 
 
 # Entities Relationship
-
+```txt
 User : Room -> N : 1
+```
+```txt
 Word : TabooWord -> 1 : N
+```
+```txt
 Word : SimilarWord -> 1 : N
-............................
+```
 
