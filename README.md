@@ -30,24 +30,89 @@ To run the project locally:
 
 1. Make sure you have Docker installed and running.  
 2. Open two terminal windows.  
-3. In the first terminal:  
+3. In the first terminal:
+   ```bash
    - cd backend  
    - docker compose up --build  
    - npm install  
-   - npm run dev  
-4. In the second terminal:  
+   - npm run dev
+   ```
+5. In the second terminal:
+   ```bash
    - cd frontend  
    - npm install  
-   - npm run dev  
+   - npm run dev
+   ```
 
 ## Endpoints
 
 ### Authentication
 
-- POST /auth/register → Register new user  
-- POST /auth/login → Login and receive access/refresh tokens  
-- POST /auth/refresh-token → Rotate tokens  
-- POST /auth/logout → Invalidate session  
+#### POST /auth/register  
+Registers a new user in the system.
+
+- **Request Body:**
+  - `name` (string, min 2 characters) — required  
+  - `email` (valid email format) — required, must be unique  
+  - `password` (string, min 6 characters) — required  
+  - `role` ("player" or "admin") — optional, defaults to "player"
+
+- **Behavior:**
+  - Creates a new user in the database with hashed password.
+  - Returns the created user (excluding password hash).
+
+- **Response:**
+  - `201 Created` with `{ status: "success", user: { id, name, email, role } }`
+
+---
+
+#### POST /auth/login  
+Authenticates a user and issues access and refresh tokens.
+
+- **Request Body:**
+  - `email` (string) — required  
+  - `password` (string) — required
+
+- **Behavior:**
+  - Validates credentials.
+  - Issues:
+    - `accessToken` (JWT, expires in 15 minutes)
+    - `refreshToken` (HTTP-only cookie, valid for 30 days)
+
+- **Response:**
+  - `200 OK` with `{ status: "success", accessToken }`  
+  - Sets `refreshToken` as secure cookie
+
+---
+
+#### POST /auth/refresh-token  
+Rotates tokens using the refresh token stored in cookies.
+
+- **Headers/Cookies:**
+  - Requires `refreshToken` cookie
+
+- **Behavior:**
+  - Validates and rotates the refresh token.
+  - Issues a new `accessToken` and `refreshToken`.
+
+- **Response:**
+  - `200 OK` with `{ status: "success", accessToken }`  
+  - Sets new `refreshToken` cookie
+
+---
+
+#### POST /auth/logout  
+Logs the user out and invalidates the session.
+
+- **Headers/Cookies:**
+  - Requires valid `accessToken` and `refreshToken`
+
+- **Behavior:**
+  - Invalidates the session in the backend.
+  - Clears the `refreshToken` cookie.
+
+- **Response:**
+  - `200 OK` with `{ message: "Logged out successfully" }`
 
 ### Rooms
 
