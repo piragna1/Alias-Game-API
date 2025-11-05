@@ -4,7 +4,6 @@
 
 - [Overview](#overview)
 - [Setup](#setup)
-- [Authentication](#authentication)
 - [Endpoints](#endpoints)
 - [Entities Relationship](#entities-relationship)
 - [WebSocket Events](#websocket-events)
@@ -47,122 +46,89 @@ To run the project locally, follow these steps:
 Both servers will start in development mode.  
 Make sure the backend (including Docker services) is running before interacting with the frontend.
 
-## Authentication
-
-The API uses token-based authentication to manage user sessions.  
-Users must register and log in to access protected endpoints.
-
-### Available endpoints
-
-- POST /register  
-  Creates a new user account.  
-  Requires the following fields in the request body:
-  ```json
-  {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "securePassword123",
-    "role": "player"
-  }
-  ```
-  
-- POST /login  
-  Authenticates the user and returns an access token in the response body.  
-  A refresh token is stored in an HTTP-only cookie with the following properties:
-  - httpOnly: true  
-  - secure: true (in production)  
-  - sameSite: "strict"  
-  - maxAge: 30 days
-
-  #### Login request format
-
-  Send a POST request to /login with the following JSON body:
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "yourPassword123"
-  }
-  ```
-
-  #### Login response
-
-  On success, the server returns:
-  - An accessToken in the response body (valid for 15 minutes).
-  - A refreshToken stored in an HTTP-only cookie.
-
-  Example response:
-  ```json
-  {
-    "status": "success",
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-  }
-  ```
-
-- POST /refresh-token  
-  Renews the access token using a valid refresh token.  
-  The refresh token is extracted from the cookie and validated.  
-  A new access token is returned in the response body, and a new refresh token is set as a cookie.
-
-- POST /logout  
-  Invalidates the current session.  
-  Requires both token extraction and session validation.
-
-### Token handling
-
-- Access tokens are returned in the response body and are valid for 15 minutes.  
-  The backend does not store access tokens.
-
-- Refresh tokens are stored securely in HTTP-only cookies and are valid for 7 days.  
-  However, they are stored in Redis with a TTL of 1 day for session management.  
-  Redis key format: alias-game:token:{userId}  
-  Redis value: the refresh token string
-
-- The extractTokens middleware parses both tokens and attaches them to the request object.  
-- The refreshToken controller validates and rotates the refresh token, issuing a new pair.  
-- Middleware functions (extractTokens, getSession) are used to validate and manage token flow.
-
-Note: All protected routes require valid tokens to be included in the request.
 ## Endpoints
 
-### Auth
+### Authentication
 
-- `POST /register`  
-  Creates a new user account.
+- **POST /auth/register**
+  - Body: { name, email, password, role }
+  - Creates a new user in the database.
+  - Returns: { status: "success", user }
 
-- `POST /login`  
-  Authenticates the user and returns access and refresh tokens.
+- **POST /auth/login**
+  - Body: { email, password }
+  - Validates credentials and issues:
+    - accessToken (JSON response, valid 15 min)
+    - refreshToken (HTTP-only cookie, valid 30 days)
+  - Returns: { status: "success", accessToken }
 
-- `POST /refresh-token`  
-  Renews the access token using a valid refresh token.
+- **POST /auth/refresh-token**
+  - Requires refreshToken cookie.
+  - Rotates tokens and returns new accessToken.
+  - Returns: { status: "success", accessToken }
 
-- `POST /logout`  
-  Invalidates the current session.
+- **POST /auth/logout**
+  - Requires valid tokens.
+  - Invalidates session, clears refreshToken cookie.
+  - Returns: { message: "Logged out successfully" }
+
+---
 
 ### Rooms
 
-- `POST /`  
-  Creates a new game room.  
-  Requires authentication.
+- **POST /rooms**
+  - Auth required.
+  - Creates a new room with the requesting user as host.
+  - Returns: room object.
 
-- `POST /:code/join`  
-  Joins an existing room by code.  
-  Requires authentication.
+- **POST /rooms/:code/join**
+  - Auth required.
+  - Adds the user to the room (auto-assigns team).
+  - Emits `player:joined` and `team-state` via sockets.
+  - Returns: updated room object.
 
-- `DELETE /:code/leave`  
-  Leaves the specified room.  
-  Requires authentication.
+- **DELETE /rooms/:code/leave**
+  - Auth required.
+  - Marks user as inactive in the room.
+  - If last player leaves → room is closed (`room:close` event).
+  - Returns: updated room object.
 
-- `PATCH /:code/status`  
-  Updates the status of a room (e.g., from "waiting" to "in-game").  
-  Requires authentication.
+- **POST /rooms/:code/start**
+  - Auth required.
+  - Starts a new game in the room.
+  - Calls `gameService.createGame`.
+  - Emits `game:started` event with initial game state.
+  - Returns: game object.
 
-- `GET /:code`  
-  Retrieves room details by code.  
-  Public endpoint.
+- **PATCH /rooms/:code/status**
+  - Auth required.
+  - Updates room status (e.g., waiting, finished).
+  - Returns: updated room object.
 
+- **GET /rooms/:code**
+  - Fetches room details (teams, players, scores).
+  - Returns: room object.
 
+- **GET /rooms**
+  - Lists available rooms with status "waiting".
+  - Returns: array of rooms.
 
-# Entities Relationship
+---
+
+### Integration with Game Flow
+
+- **REST → Game Start**
+  - `POST /rooms/:code/start` → `gameService.createGame` → `SocketEventEmitter.gameStarted`.
+
+- **Sockets → Game Progress**
+  - Players interact via `chat:message` and `game:message`.
+  - `game.service.js` validates answers/taboo words.
+  - Events emitted: `game:correct-answer`, `game:taboo-word`, `game:turn-updated`, `game:finished`.
+
+- **Persistence**
+  - Room state stored in Redis (`roomCache`).
+  - Game state stored in Redis (`gameCache`).
+  - DB (Sequelize) used for persistence of rooms, users, words, scores.# Entities Relationship
 ```txt
 User : Room -> N : 1
 ```
