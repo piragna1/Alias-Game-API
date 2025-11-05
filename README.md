@@ -7,6 +7,7 @@
 - [Endpoints](#endpoints)
 - [Entities Relationship](#entities-relationship)
 - [WebSocket Events](#websocket-events)
+- [Game Flow (Frontend Perspective)](#Game-Flow-(Frontend-Perspective))
 
 ## Overview
 
@@ -141,34 +142,6 @@ The word to guess is related to several taboo words that can not be written.
 Word : SimilarWord -> 1 : N
 ```
 The word to guess is related to several similar words each one with its own similarity score.
-
-
-## WebSocket Events
-
-The game logic is handled via WebSocket events using [Socket.IO](https://socket.io/).  
-Clients must establish a socket connection after authentication to participate in real-time gameplay.
-
-### Example events
-
-- `connect`  
-  Triggered when a client connects to the server.
-
-- `room:join`  
-  Join a specific room by code.
-
-- `game:start`  
-  Starts a new game round.
-
-- `game:guess`  
-  Submit a guess for the current word.
-
-- `game:skip`  
-  Skip the current word.
-
-- `game:end`  
-  Ends the current round and broadcasts results.
-
-> Note: All socket events are namespaced and require a valid session.
 
 ## Game Flow (Frontend Perspective)
 
