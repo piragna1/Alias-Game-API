@@ -130,6 +130,8 @@ Make sure the backend (including Docker services) is running before interacting 
   - Room state stored in Redis (`roomCache`).
   - Game state stored in Redis (`gameCache`).
   - DB (Sequelize) used for persistence of rooms, users, words, scores.# Entities Relationship
+ 
+## Entities Relationship
 ```txt
 User : Room -> N : 1
 ```
