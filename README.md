@@ -6,7 +6,6 @@
 - [Setup](#setup)
 - [Endpoints](#endpoints)
 - [Entities Relationship](#entities-relationship)
-- [WebSocket Events](#websocket-events)
 - [Game Flow (Frontend Perspective)](#Game-Flow-(Frontend-Perspective))
 
 ## Overview
